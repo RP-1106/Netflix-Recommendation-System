@@ -31,6 +31,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 import recommender
+from semantic_search import semantic_search
 from schemas import (
     FeedbackRequest,
     FeedbackResponse,
@@ -48,7 +49,7 @@ logger = logging.getLogger(__name__)
 # CONFIG  (from environment)
 # ─────────────────────────────────────────────────────────────────────────────
 
-DATA_DIR      = os.getenv("DATA_DIR", "../../data")
+DATA_DIR      = os.getenv("DATA_DIR", "../data/output")
 MODEL_PATH       = os.getenv("MODEL_PATH", "../data/bert4rec_v3.onnx")
 SASREC_PATH      = os.getenv("SASREC_MODEL_PATH", "../data/sasrec_v3.onnx")
 REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379")
@@ -232,10 +233,25 @@ def recommend(req: RecommendRequest):
             session_id=req.session_id,
             watch_history=req.watch_history,
             top_k=req.top_k,
+            redis_client=_redis,
         )
     except Exception as e:
         logger.error(f"Inference error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Inference failed. See server logs.")
+
+    # ── Option A: Filter hard negatives ──────────────────────────────────────
+    if _redis and cards:
+        try:
+            never_key = f"never:{req.session_id}"
+            never_set = _redis.smembers(never_key)
+            if never_set:
+                never_ids = {m.decode() if isinstance(m, bytes) else m for m in never_set}
+                before = len(cards)
+                cards = [c for c in cards if c.item_id not in never_ids]
+                if len(cards) < before:
+                    logger.info(f"  Hard negative filter: removed {before - len(cards)} disliked movies")
+        except Exception as e:
+            logger.warning(f"Hard negative filter error: {e}")
 
     # ── 6. Write to cache ─────────────────────────────────────────────────────
     if _redis and cards:
@@ -299,3 +315,34 @@ def genres():
     for card in _idx_to_card.values():
         all_genres.update(card.genres)
     return {"genres": sorted(all_genres)}
+
+
+@app.get("/search")
+async def search(q: str, top_k: int = 10):
+    """
+    Semantic search over the catalogue.
+    Returns catalogue movies most similar to the query by meaning.
+    Example: /search?q=dark+psychological+thriller
+    """
+    if not q or len(q.strip()) < 2:
+        return {"results": [], "query": q}
+    
+    results = semantic_search(q.strip(), top_k=min(top_k, 20))
+    
+    # Convert to MovieCard format
+    cards = []
+    for r in results:
+        card = recommender._idx_to_card.get(r["item_idx"])
+        if card:
+            cards.append({
+                "item_id":     card.item_id,
+                "item_idx":    card.item_idx,
+                "title":       card.title,
+                "release_year": card.release_year,
+                "genres":      card.genres,
+                "log_popularity": card.log_popularity,
+                "similarity_score": round(r["score"], 3),
+            })
+    
+    return {"results": cards, "query": q}
+

@@ -1,0 +1,130 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: #000;
+}
+
+.login-bg {
+  position: fixed;
+  inset: 0;
+  background: 
+    linear-gradient(135deg, #1a0000 0%, #000 40%, #000 60%, #1a0000 100%);
+  z-index: 0;
+}
+
+/* Subtle red glow effect instead of broken external image */
+.login-bg::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(229,9,20,0.15) 0%, transparent 70%);
+  z-index: 1;
+}
+
+.login-bg-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 2;
+}
+
+.login-logo {
+  position: fixed;
+  top: 28px;
+  left: 4%;
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: #e50914;
+  letter-spacing: 2px;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.login-card {
+  position: relative;
+  z-index: 10;
+  background: rgba(0,0,0,0.82);
+  border-radius: 4px;
+  padding: 60px 68px;
+  width: 100%;
+  max-width: 450px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.login-heading {
+  font-family: var(--font-body);
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 28px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.login-input {
+  background: #333;
+  border: none;
+  border-radius: 4px;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 16px;
+  padding: 18px 20px;
+  outline: none;
+  transition: background 0.2s ease;
+}
+
+.login-input:focus { background: #454545; }
+
+.login-input::placeholder { color: #8c8c8c; }
+
+.login-error {
+  color: #e87c03;
+  font-size: 13px;
+  background: rgba(232,124,3,0.1);
+  padding: 10px 12px;
+  border-radius: 4px;
+  border-left: 3px solid #e87c03;
+}
+
+.login-submit {
+  background: #e50914;
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 16px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 8px;
+  transition: background 0.2s ease, opacity 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.login-submit:hover:not(:disabled) { background: #f40612; }
+.login-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.login-toggle {
+  font-size: 16px;
+  color: #737373;
+  margin-bottom: 16px;
+}
+
+.login-toggle button {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.login-toggle button:hover { text-decoration: underline; }

@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import onnxruntime as ort
+from semantic_search import load_search_index, semantic_search
 from sklearn.preprocessing import StandardScaler
 
 from schemas import MovieCard
@@ -52,6 +53,14 @@ _user_feature_matrix: np.ndarray | None = None
 # user_id (string) → user_idx (integer row in _user_feature_matrix)
 _user_id_to_idx: dict[str, int] = {}
 
+# Genre index for fallback matching: genre_set → list of (item_idx, log_popularity)
+# Built at startup so unknown titles can be matched by genre overlap
+_genre_index: dict[frozenset, list[tuple[int, float]]] = {}
+# item_idx → frozenset of genres (for fast scoring)
+_item_genres: dict[int, frozenset] = {}
+# item_idx → release_year (for year proximity scoring)
+_item_years: dict[int, int] = {}
+
 MIN_SEQ_LEN: int = 5    # sequences shorter than this get cold-start fallback
 MAX_SEQ_LEN: int = 50   # model's max_sentence_length — longer sequences are truncated
 PAD_TOKEN:   int = 0
@@ -76,7 +85,7 @@ def load_data(data_dir: str, model_path: str, sasrec_model_path: str | None = No
     """
     global _ort_session, _ort_session_sasrec, _item_id_to_idx, _idx_to_card, _title_to_item_id
     global _popularity_fallback_ids, _user_feature_matrix
-    global _user_id_to_idx
+    global _user_id_to_idx, _genre_index, _item_genres, _item_years
 
     data_dir = Path(data_dir)
 
@@ -122,6 +131,25 @@ def load_data(data_dir: str, model_path: str, sasrec_model_path: str | None = No
         itf.sort_values("log_popularity", ascending=False)["item_id"]
         .tolist()
     )
+
+    # ── Build genre index for fallback matching ───────────────────────────────
+    # Maps each item's genre set to its (item_idx, log_popularity) for scoring
+    genre_cols = [c for c in itf.columns if c.startswith("genre_")]
+    for _, row in itf.iterrows():
+        idx = int(row["item_idx"])
+        genres = frozenset(
+            col.replace("genre_", "").replace("_", " ").lower()
+            for col in genre_cols if row[col] == 1
+        )
+        _item_genres[idx] = genres
+        _item_years[idx] = int(row["release_year"]) if pd.notna(row["release_year"]) else 2000
+    logger.info(f"  Genre index built for {len(_item_genres)} items")
+
+    # ── Build semantic search index ───────────────────────────────────────────
+    try:
+        load_search_index(itf)
+    except Exception as e:
+        logger.warning(f"Semantic search unavailable: {e}")
 
     # ── 2. Build user features ────────────────────────────────────────────────
     logger.info("Loading user features...")
@@ -171,61 +199,136 @@ def item_count() -> int:
 # A/B ROUTING
 # ─────────────────────────────────────────────────────────────────────────────
 
-def get_model_variant(session_id: str) -> str:
+def get_model_variant(session_id: str, redis_client=None) -> str:
     """
-    Deterministically assign a session to 'bert4rec' or 'sasrec'.
-    Same session_id always gets the same model — required for valid A/B measurement.
-    Uses MD5 hash of session_id, takes modulo 2.
+    Route traffic between BERT4Rec and SASRec using Thompson sampling bandit.
+    
+    Thompson sampling: sample from Beta(wins+1, losses+1) for each variant.
+    The variant with the higher sample gets the request.
+    Falls back to MD5 hash if Redis unavailable or no feedback yet.
     """
-    return (
-        "bert4rec"
-        if int(hashlib.md5(session_id.encode()).hexdigest(), 16) % 2 == 0
-        else "sasrec"
-    )
+    # Try Thompson sampling if Redis available
+    if redis_client:
+        try:
+            b4_wins   = int(redis_client.get("bandit:bert4rec:wins")   or 0)
+            b4_losses = int(redis_client.get("bandit:bert4rec:losses") or 0)
+            sr_wins   = int(redis_client.get("bandit:sasrec:wins")     or 0)
+            sr_losses = int(redis_client.get("bandit:sasrec:losses")   or 0)
 
+            total_feedback = b4_wins + b4_losses + sr_wins + sr_losses
+            if total_feedback >= 10:  # enough data for bandit
+                # Sample from Beta distributions
+                b4_sample = float(np.random.beta(b4_wins + 1, b4_losses + 1))
+                sr_sample = float(np.random.beta(sr_wins + 1, sr_losses + 1))
+                variant = "bert4rec" if b4_sample > sr_sample else "sasrec"
+                logger.debug(
+                    f"Thompson sampling: bert4rec={b4_sample:.3f} sasrec={sr_sample:.3f} → {variant} "
+                    f"(b4: {b4_wins}W/{b4_losses}L, sr: {sr_wins}W/{sr_losses}L)"
+                )
+                return variant
+        except Exception:
+            pass  # fall through to hash-based routing
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SEQUENCE BUILDING
-# ─────────────────────────────────────────────────────────────────────────────
+    # Fallback: deterministic MD5 hash routing (50/50 split)
+    digest = hashlib.md5(session_id.encode()).hexdigest()
+    return "bert4rec" if int(digest, 16) % 2 == 0 else "sasrec"
 
-def build_sequence(watch_history: list[str], model_variant: str = "bert4rec") -> list[int]:
+def build_sequence(watch_history: list, model_variant: str = "bert4rec") -> list[int]:
     """
-    Convert a list of movie title strings into a list of model tokens.
+    Convert a list of WatchItem objects into model tokens.
 
-    Steps:
-      1. Lowercase + strip each title
-      2. Look up canonical item_id (highest-click-count version for duplicates)
-      3. Convert item_id → item_idx → token using per-model offset:
-            BERT4Rec: item_idx + 2  (PAD=0, MASK=1, items start at 2)
-            SASRec:   item_idx + 1  (PAD=0,         items start at 1)
-      4. Skip titles not found in our item catalogue
-      5. Truncate to MAX_SEQ_LEN (keep the most recent MAX_SEQ_LEN items)
+    For each item:
+      1. Try exact title match in catalogue
+      2. If not found, find best catalogue match by genre overlap + year proximity
+      3. Convert item_idx → token using per-model offset
+      4. Truncate to MAX_SEQ_LEN
 
-    Returns a list of integer tokens ready to be padded and fed to the model.
-    Unknown titles are silently dropped — the user just has a shorter sequence.
+    watch_history items must have: .title, .genres (list[str]), .release_year (int|None)
     """
     token_offset = (
         TOKEN_OFFSET_SASREC if model_variant == "sasrec" else TOKEN_OFFSET_BERT4REC
     )
     tokens: list[int] = []
-    unknown: list[str] = []
+    matched_exact = 0
+    matched_genre = 0
+    unknown = 0
 
-    for title in watch_history:
+    for item in watch_history:
+        title = item.title if hasattr(item, 'title') else item
+        genres = item.genres if hasattr(item, 'genres') else []
+        release_year = item.release_year if hasattr(item, 'release_year') else None
+
+        # ── 1. Exact title match ──────────────────────────────────────────────
         key = title.lower().strip()
         item_id = _title_to_item_id.get(key)
-        if item_id is None:
-            unknown.append(title)
-            continue
-        item_idx = _item_id_to_idx.get(item_id)
-        if item_idx is None:
-            unknown.append(title)
-            continue
-        tokens.append(item_idx + token_offset)
+        if item_id is not None:
+            item_idx = _item_id_to_idx.get(item_id)
+            if item_idx is not None:
+                tokens.append(item_idx + token_offset)
+                matched_exact += 1
+                continue
 
-    logger.info(f"  Matched {len(tokens)} / {len(watch_history)} titles. Unknown: {unknown[:10]}")
+        # ── 2. Genre fallback ─────────────────────────────────────────────────
+        if genres and _item_genres:
+            query_genres = frozenset(g.lower().strip() for g in genres)
+            best_idx = _find_best_genre_match(query_genres, release_year)
+            if best_idx is not None:
+                tokens.append(best_idx + token_offset)
+                matched_genre += 1
+                continue
 
-    # Keep the most recent MAX_SEQ_LEN items
+        unknown += 1
+
+    logger.info(
+        f"  Sequence: {matched_exact} exact + {matched_genre} genre-matched + "
+        f"{unknown} unknown = {len(tokens)} tokens"
+    )
     return tokens[-MAX_SEQ_LEN:]
+
+
+def _find_best_genre_match(
+    query_genres: frozenset,
+    release_year: int | None,
+    top_n: int = 1,
+) -> int | None:
+    """
+    Score every catalogue item by:
+      - Jaccard similarity with query genres (weight 0.7)
+      - Year proximity (weight 0.3, normalised to 0-1 over 20-year window)
+    Return the item_idx of the best match, or None if no genres provided.
+    """
+    if not query_genres or not _item_genres:
+        return None
+
+    best_score = -1.0
+    best_idx = None
+
+    for idx, item_genre_set in _item_genres.items():
+        if not item_genre_set:
+            continue
+
+        # Jaccard similarity
+        intersection = len(query_genres & item_genre_set)
+        union = len(query_genres | item_genre_set)
+        jaccard = intersection / union if union > 0 else 0.0
+
+        if jaccard == 0:
+            continue  # skip zero-genre-overlap items entirely
+
+        # Year proximity (0 = 20+ years apart, 1 = same year)
+        if release_year and idx in _item_years:
+            year_diff = abs(release_year - _item_years[idx])
+            year_score = max(0.0, 1.0 - year_diff / 20.0)
+        else:
+            year_score = 0.5  # neutral if year unknown
+
+        score = 0.7 * jaccard + 0.3 * year_score
+
+        if score > best_score:
+            best_score = score
+            best_idx = idx
+
+    return best_idx
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -234,8 +337,9 @@ def build_sequence(watch_history: list[str], model_variant: str = "bert4rec") ->
 
 def get_recommendations(
     session_id: str,
-    watch_history: list[str],
+    watch_history: list,
     top_k: int = 10,
+    redis_client=None,
 ) -> tuple[list[MovieCard], str, bool]:
     """
     Main entry point called by the /recommend endpoint.
@@ -246,10 +350,8 @@ def get_recommendations(
         model_variant:   'bert4rec' or 'sasrec' (for A/B logging)
         cold_start:      True if sequence was too short → popularity fallback used
     """
-    model_variant = get_model_variant(session_id)
-    sequence = build_sequence(watch_history, model_variant)
-
-    # Cold-start gate: fewer than MIN_SEQ_LEN known items → popularity fallback
+    model_variant = get_model_variant(session_id, redis_client=redis_client)
+    sequence = build_sequence(watch_history, model_variant)    # Cold-start gate: fewer than MIN_SEQ_LEN known items → popularity fallback
     if len(sequence) < MIN_SEQ_LEN:
         logger.info(
             f"Cold start: sequence length {len(sequence)} < {MIN_SEQ_LEN}. "
@@ -368,14 +470,15 @@ def _popularity_fallback(top_k: int) -> list[MovieCard]:
 # CACHE KEY
 # ─────────────────────────────────────────────────────────────────────────────
 
-def make_cache_key(session_id: str, watch_history: list[str], top_k: int) -> str:
+def make_cache_key(session_id: str, watch_history: list, top_k: int) -> str:
     """
     Build a Redis cache key from the session and request.
-    Key is based on the sorted, lowercased watch history so that small
-    ordering differences don't cause unnecessary cache misses.
     """
-    canonical_history = sorted(t.lower().strip() for t in watch_history)
-    payload = json.dumps({"h": canonical_history, "k": top_k}, sort_keys=True)
+    titles = sorted(
+        (item.title if hasattr(item, 'title') else item).lower().strip()
+        for item in watch_history
+    )
+    payload = json.dumps({"h": titles, "k": top_k}, sort_keys=True)
     digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
     return f"rec:{session_id}:{digest}"
 

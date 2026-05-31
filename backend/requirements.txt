@@ -1,9 +1,9 @@
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
-onnxruntime==1.18.1
+onnxruntime==1.24.1
 numpy==1.26.4
 pandas==2.2.2
-scikit-learn==1.4.2
+scikit-learn
 redis==5.0.4
 kafka-python==2.0.2
 python-dotenv==1.0.1

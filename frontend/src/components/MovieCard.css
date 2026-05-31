@@ -1,0 +1,155 @@
+.movie-card {
+  position: relative;
+  width: 180px;
+  height: 270px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  z-index: 1;
+}
+
+.movie-card.hovered {
+  transform: scale(1.08);
+  z-index: 10;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+}
+
+.card-poster {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.card-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.card-placeholder span {
+  font-family: var(--font-display);
+  font-size: 18px;
+  text-align: center;
+  color: var(--nf-white);
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.movie-card.hovered .card-overlay {
+  opacity: 1;
+}
+
+.card-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px;
+  transform: translateY(8px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.movie-card.hovered .card-info {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-title {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nf-white);
+  margin-bottom: 4px;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.card-year {
+  font-size: 11px;
+  color: #46d369;
+  font-weight: 500;
+}
+
+.card-rating {
+  font-size: 11px;
+  color: var(--nf-light-gray);
+}
+
+.card-genres {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.genre-tag {
+  font-size: 10px;
+  color: var(--nf-light-gray);
+  background: rgba(255,255,255,0.1);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.card-feedback {
+  display: flex;
+  gap: 6px;
+}
+
+.feedback-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all var(--transition);
+  padding: 0;
+}
+
+.feedback-btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.feedback-btn.active-up {
+  background: #46d369;
+  border-color: #46d369;
+}
+
+.feedback-btn.active-down {
+  background: var(--nf-red);
+  border-color: var(--nf-red);
+}

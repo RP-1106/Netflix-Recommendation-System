@@ -34,3 +34,13 @@ Thumbs.db
 
 # Docker volumes
 *.log
+
+
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Scripts
+quantize_models.py

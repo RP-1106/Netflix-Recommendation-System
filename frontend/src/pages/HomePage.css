@@ -1,0 +1,81 @@
+.home-page {
+  background: #141414;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.home-rows {
+  padding-top: 20px;
+  padding-bottom: 60px;
+  transition: opacity 0.3s ease;
+}
+
+.home-rows.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Hero carousel ─────────────────────────────────────────────────────────── */
+.hero-carousel {
+  position: relative;
+  width: 100%;
+}
+
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  width: 50px;
+  height: 80px;
+  border-radius: 4px;
+  font-size: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+
+.hero-carousel:hover .hero-arrow {
+  opacity: 1;
+}
+
+.hero-arrow:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.hero-arrow-left  { left: 16px; }
+.hero-arrow-right { right: 16px; }
+
+.hero-dots {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 20;
+}
+
+.hero-dot {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.hero-dot.active {
+  width: 24px;
+  background: rgba(255, 255, 255, 0.9);
+}
