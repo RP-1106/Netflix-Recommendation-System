@@ -213,3 +213,34 @@
 .modal-year { color: #46d369 !important; }
 .modal-rating { color: #ffffff !important; }
 .modal-overview { color: #cccccc !important; }
+
+.modal-watch-together-btn {
+  background: rgba(255,255,255,0.15);
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+}
+
+.modal-watch-together-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Fix Play Trailer button text to white */
+.modal-play-btn {
+  background: #ffffff;
+  color: #000000 !important;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.modal-play-btn:hover { background: rgba(255,255,255,0.85); }

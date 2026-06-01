@@ -1,123 +1,112 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { v4 as uuidv4 } from 'uuid'
 
 const AuthContext = createContext(null)
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)           // { name, email, avatar }
-  const [profile, setProfile] = useState(null)     // { name, avatar, color }
-  const [sessionId, setSessionId] = useState(null)
-  const [watchHistory, setWatchHistory] = useState([]) // list of {title, genres, release_year}
-  const [continueWatching, setContinueWatching] = useState([]) // { movie, progress (0-1) }
-  const [watchedMovies, setWatchedMovies] = useState(new Set()) // fully watched titles
+  const [user, setUser]       = useState(() => { try { return JSON.parse(localStorage.getItem('nf_user')) } catch { return null } })
+  const [profile, setProfile] = useState(() => { try { return JSON.parse(localStorage.getItem('nf_profile')) } catch { return null } })
+  const [profiles, setProfiles] = useState(() => { try { return JSON.parse(localStorage.getItem('nf_profiles')) || [] } catch { return [] } })
 
-  // Load from localStorage on mount
+  const [sessionId] = useState(() => {
+    let id = localStorage.getItem('nf_session')
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem('nf_session', id) }
+    return id
+  })
+
+  const [watchHistory, setWatchHistory]         = useState([])
+  const [continueWatching, setContinueWatching] = useState([])
+  const [watchedMovies, setWatchedMovies]       = useState(new Set())
+
+  // Load per-profile history from backend when profile changes
   useEffect(() => {
-    const storedUser    = localStorage.getItem('nf_user')
-    const storedProfile = localStorage.getItem('nf_profile')
-    const storedSession = localStorage.getItem('nf_session')
-    const storedHistory = localStorage.getItem('nf_history')
-    const storedContinue = localStorage.getItem('nf_continue')
-    const storedWatched = localStorage.getItem('nf_watched')
-
-    if (storedUser)    setUser(JSON.parse(storedUser))
-    if (storedProfile) setProfile(JSON.parse(storedProfile))
-    if (storedSession) setSessionId(storedSession)
-    else {
-      const newSession = uuidv4()
-      setSessionId(newSession)
-      localStorage.setItem('nf_session', newSession)
+    if (!user?.email || !profile?.id) return
+    const loadHistory = async () => {
+      try {
+        const res  = await fetch(`${API_BASE}/history/${encodeURIComponent(user.email)}/${profile.id}`)
+        const data = await res.json()
+        const hist = data.history || []
+        setWatchHistory(hist)
+        setWatchedMovies(new Set(hist.map(h => h.title || h)))
+        localStorage.setItem('nf_history', JSON.stringify(hist))
+      } catch {
+        const stored = localStorage.getItem(`nf_history_${profile.id}`)
+        if (stored) {
+          const hist = JSON.parse(stored)
+          setWatchHistory(hist)
+          setWatchedMovies(new Set(hist.map(h => h.title || h)))
+        }
+      }
     }
-    if (storedHistory) setWatchHistory(JSON.parse(storedHistory))
-    if (storedContinue) setContinueWatching(JSON.parse(storedContinue))
-    if (storedWatched) setWatchedMovies(new Set(JSON.parse(storedWatched)))
-  }, [])
+    loadHistory()
+  }, [user?.email, profile?.id])
 
-  const login = useCallback((userData) => {
+  const saveHistoryToBackend = useCallback(async (history) => {
+    if (!user?.email || !profile?.id) return
+    try {
+      await fetch(`${API_BASE}/history/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_email: user.email, profile_id: profile.id, history }),
+      })
+    } catch (e) { console.error('Failed to save history:', e) }
+  }, [user?.email, profile?.id])
+
+  const login = (userData) => {
     setUser(userData)
     localStorage.setItem('nf_user', JSON.stringify(userData))
-    // Generate fresh session on login
-    const newSession = uuidv4()
-    setSessionId(newSession)
-    localStorage.setItem('nf_session', newSession)
-  }, [])
+    if (userData.profiles) {
+      setProfiles(userData.profiles)
+      localStorage.setItem('nf_profiles', JSON.stringify(userData.profiles))
+    }
+  }
 
-  const logout = useCallback(() => {
-    setUser(null)
-    setProfile(null)
+  const logout = () => {
+    setUser(null); setProfile(null); setProfiles([])
+    setWatchHistory([]); setWatchedMovies(new Set())
     localStorage.removeItem('nf_user')
     localStorage.removeItem('nf_profile')
-  }, [])
+    localStorage.removeItem('nf_profiles')
+    localStorage.removeItem('nf_history')
+  }
 
-  const selectProfile = useCallback((profileData) => {
-    setProfile(profileData)
-    localStorage.setItem('nf_profile', JSON.stringify(profileData))
-  }, [])
+  const selectProfile = (prof) => {
+    setProfile(prof)
+    setWatchHistory([])
+    setWatchedMovies(new Set())
+    setContinueWatching([])
+    localStorage.setItem('nf_profile', JSON.stringify(prof))
+  }
 
   const addToHistory = useCallback((movie) => {
-    // Accept either a string (legacy) or a full movie object
-    const item = typeof movie === 'string'
-      ? { title: movie, genres: [], release_year: null }
-      : { title: movie.title, genres: movie.genres || [], release_year: movie.release_year || null }
-
     setWatchHistory(prev => {
-      const filtered = prev.filter(h => h.title !== item.title)
-      const updated = [item, ...filtered].slice(0, 100)
+      const filtered = prev.filter(m => (m.title || m) !== (movie.title || movie))
+      const updated  = [movie, ...filtered].slice(0, 50)
       localStorage.setItem('nf_history', JSON.stringify(updated))
+      localStorage.setItem(`nf_history_${profile?.id}`, JSON.stringify(updated))
+      setWatchedMovies(new Set(updated.map(h => h.title || h)))
+      saveHistoryToBackend(updated)
       return updated
     })
-  }, [])
+  }, [profile?.id, saveHistoryToBackend])
 
   const updateProgress = useCallback((movie, progress) => {
-    setContinueWatching(prev => {
-      const filtered = prev.filter(item => item.movie.title !== movie.title)
-      let updated
-
-      if (progress >= 0.9) {
-        // Fully watched — move to watched set
-        setWatchedMovies(prevWatched => {
-          const newWatched = new Set(prevWatched)
-          newWatched.add(movie.title)
-          localStorage.setItem('nf_watched', JSON.stringify([...newWatched]))
-          return newWatched
-        })
-        updated = filtered
-      } else if (progress > 0.05) {
-        // In progress — add to continue watching
-        updated = [{ movie, progress }, ...filtered].slice(0, 20)
-      } else {
-        updated = filtered
-      }
-
-      localStorage.setItem('nf_continue', JSON.stringify(updated))
-      return updated
-    })
     addToHistory(movie)
+    setContinueWatching(prev => {
+      const filtered = prev.filter(cw => (cw.movie?.title || cw.movie) !== (movie.title || movie))
+      return progress < 0.9 ? [{ movie, progress }, ...filtered].slice(0, 20) : filtered
+    })
   }, [addToHistory])
 
   return (
     <AuthContext.Provider value={{
-      user,
-      profile,
-      sessionId,
-      watchHistory,
-      continueWatching,
-      watchedMovies,
-      login,
-      logout,
-      selectProfile,
-      addToHistory,
-      updateProgress,
-      isLoggedIn: !!user,
-      hasProfile: !!profile,
+      user, profile, profiles, sessionId,
+      watchHistory, continueWatching, watchedMovies,
+      login, logout, selectProfile, addToHistory, updateProgress,
     }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
-  return ctx
-}
+export const useAuth = () => useContext(AuthContext)

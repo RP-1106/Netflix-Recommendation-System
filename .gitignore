@@ -35,7 +35,24 @@ Thumbs.db
 # Docker volumes
 *.log
 
+# Dependencies
+node_modules/
+frontend/node_modules/
 
+# Data files (too large for git)
+data/output/
+data/temp_merged/
+
+# Env files
+backend/.env
+frontend/.env.production
+backend/.env.txt
+
+# Build artifacts
+frontend/dist/
+
+# Misc
+quantize_models.py
 
 # Frontend
 frontend/node_modules/

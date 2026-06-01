@@ -1,0 +1,98 @@
+.bell-wrap { position: relative; }
+
+.bell-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  position: relative;
+  padding: 4px;
+  line-height: 1;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  background: #e50914;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bell-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  width: 300px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.bell-header {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 1px solid #333;
+}
+
+.bell-empty {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+}
+
+.bell-invite {
+  padding: 14px 16px;
+  border-bottom: 1px solid #222;
+}
+
+.bell-invite-text {
+  font-size: 13px;
+  color: #ccc;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.bell-invite-text strong { color: #fff; }
+.bell-invite-text em { color: #e50914; font-style: normal; }
+
+.bell-invite-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bell-accept {
+  background: #46d369;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bell-decline {
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bell-accept:hover { background: #3dbe5c; }
+.bell-decline:hover { background: #444; }

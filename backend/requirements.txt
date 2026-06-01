@@ -7,3 +7,9 @@ scikit-learn
 redis==5.0.4
 kafka-python==2.0.2
 python-dotenv==1.0.1
+sentence_transformers
+passlib[bcrypt]
+python-jose[cryptography]
+sqlalchemy
+aiosqlite
+websockets

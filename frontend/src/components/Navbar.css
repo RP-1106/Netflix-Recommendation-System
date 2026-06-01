@@ -116,3 +116,10 @@
 }
 
 .profile-dropdown button:hover { color: #e50914; }
+
+.navbar-links span.nav-active {
+  color: #ffffff;
+  font-weight: 700;
+  border-bottom: 2px solid #e50914;
+  padding-bottom: 2px;
+}

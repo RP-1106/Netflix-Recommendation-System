@@ -29,6 +29,8 @@ import redis as redis_lib
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from database import init_db
+from auth import router as auth_router
 
 import recommender
 from semantic_search import semantic_search
@@ -112,6 +114,7 @@ async def lifespan(app: FastAPI):
     global _redis
 
     logger.info("=== Starting up ===")
+    init_db()
 
     # Load data and ONNX model into memory
     recommender.load_data(DATA_DIR, MODEL_PATH, SASREC_PATH)
@@ -150,11 +153,12 @@ app = FastAPI(
     description="BERT4Rec / SASRec recommendation API with A/B testing",
     lifespan=lifespan,
 )
+app.include_router(auth_router)
 
 # CORS — allow the React frontend (and localhost dev) to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten to your Vercel domain in production
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
