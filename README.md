@@ -1,20 +1,16 @@
-# NETFLX — AI-Powered Streaming Recommendation System
+# NETFLX: AI-Powered Streaming Recommendation System
 
 A full-stack Netflix-inspired recommendation platform built with transformer-based ML models, real-time features, and a production-ready deployment pipeline.
 
-> **Demo Video:** [Watch on YouTube](https://your-youtube-link-here) ← *Replace with your link*
+> **Demo Video:** [Watch on YouTube](https://your-youtube-link-here) 
 
----
 
 ## Overview
-
 NETFLX is an end-to-end recommendation system that combines state-of-the-art sequential recommendation models with a polished streaming UI. Users get personalised movie and TV show recommendations that improve as they interact with the platform, with support for multi-profile accounts, real-time Watch Together sessions, and semantic search.
-
----
 
 ## Features
 
-### Recommendation Engine
+### 1. Recommendation Engine
 - **BERT4Rec v3** and **SASRec v3** — transformer-based sequential recommendation models trained on Netflix UK data (9,387 items, 110,065 users), served via ONNX Runtime
 - **Thompson Sampling A/B testing** — dynamically routes users between models based on real-time feedback signals
 - **Semantic Search** — `all-MiniLM-L6-v2` sentence transformer encodes 9,387 items into a dense embedding space; supports mood-based and genre-based queries ("dark psychological thriller", "feel-good comedy")
@@ -22,7 +18,7 @@ NETFLX is an end-to-end recommendation system that combines state-of-the-art seq
 - **Redis caching** — sub-2ms recommendation latency after warm-up
 - **Kafka feedback pipeline** — asynchronous feedback ingestion for online learning
 
-### User Experience
+### 2. User Experience
 - Netflix-style UI with hero carousel, horizontal movie rows, hover previews
 - **Multi-profile accounts** — up to 6 profiles per account, each with isolated watch history, Continue Watching, and Watch Again lists
 - **Watch Together** — invite friends to a shared watch party with real-time WebSocket chat
@@ -31,13 +27,11 @@ NETFLX is an end-to-end recommendation system that combines state-of-the-art seq
 - TV Shows, Movies, New & Popular, and My List pages
 - Profile management — create, rename, delete profiles with custom avatars
 
-### Technical
+### 3. Technical
 - All user data (accounts, profiles, watch history, Continue Watching, Watch Again) persisted to SQLite across server restarts
 - Per-profile data isolation — switching profiles loads completely separate recommendation history
 - Docker Compose deployment with 5 services (frontend, backend, Redis, Kafka, Zookeeper)
 - Deployed to AWS EC2 (t3.medium, Ubuntu 24.04)
-
----
 
 ## Architecture
 
@@ -56,8 +50,6 @@ FastAPI Backend (port 8000)
     └── Kafka (feedback pipeline)
 ```
 
----
-
 ## Tech Stack
 
 | Layer | Technology |
@@ -74,8 +66,6 @@ FastAPI Backend (port 8000)
 | Containerisation | Docker, Docker Compose |
 | Deployment | AWS EC2 (t3.medium, Ubuntu 24.04) |
 
----
-
 ## Dataset
 
 - **Netflix UK catalogue** — 9,387 items with genre, popularity, and release metadata
@@ -83,7 +73,6 @@ FastAPI Backend (port 8000)
 - **Item features** — genre embeddings, log-popularity scores, release year
 - **User features** — 38-dimensional feature vectors for cold-start handling
 
----
 
 ## Getting Started
 
@@ -126,8 +115,6 @@ docker compose up
 ```
 
 Open `http://localhost`
-
----
 
 ## Deployment (AWS EC2)
 
