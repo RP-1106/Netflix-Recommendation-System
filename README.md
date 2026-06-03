@@ -139,17 +139,6 @@ docker compose up -d
 
 > Note: The frontend image must be built with `VITE_API_BASE_URL=http://<EC2-PUBLIC-IP>:8000` for the backend connection to work.
 
----
-
-## Contributors
-
-| Contributor | GitHub | 
-|---|---|
-| Rhea Pandita | [@RP-1106](https://github.com/RP-1106) |
-| Sanjay Balasubramaniam| [@Sanjay180803](https://github.com/Sanjay180803) |
-
----
-
 ## Docker Hub
 
 - Backend: `rp1106/netflx-backend:latest`
