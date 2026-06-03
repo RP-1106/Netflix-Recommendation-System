@@ -168,8 +168,3 @@ docker compose up -d
 - Backend: `rp1106/netflx-backend:latest`
 - Frontend: `rp1106/netflx-frontend:latest`
 
----
-
-## License
-
-MIT
