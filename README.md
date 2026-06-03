@@ -156,10 +156,10 @@ docker compose up -d
 
 ## Contributors
 
-| Contributor | GitHub | Role |
-|---|---|---|
-| Rhea Pandita | [@RP-1106](https://github.com/RP-1106)
-| Sanjay Balasubramaniam| [@Sanjay180803](https://github.com/Sanjay180803) 
+| Contributor | GitHub | 
+|---|---|
+| Rhea Pandita | [@RP-1106](https://github.com/RP-1106) |
+| Sanjay Balasubramaniam| [@Sanjay180803](https://github.com/Sanjay180803) |
 
 ---
 
