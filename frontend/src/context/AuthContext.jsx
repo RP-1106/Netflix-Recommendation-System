@@ -10,7 +10,10 @@ export function AuthProvider({ children }) {
 
   const [sessionId] = useState(() => {
     let id = localStorage.getItem('nf_session')
-    if (!id) { id = crypto.randomUUID(); localStorage.setItem('nf_session', id) }
+    if (!id) { id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  const r = Math.random() * 16 | 0
+  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+}); localStorage.setItem('nf_session', id) }
     return id
   })
 
