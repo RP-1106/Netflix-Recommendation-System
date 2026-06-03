@@ -2,80 +2,54 @@ import { useState, useEffect } from 'react'
 import { getTMDBData } from '../api/client'
 import './MovieCard.css'
 
-export default function MovieCard({ movie, onClick, showFeedback = false, modelVariant, onFeedback }) {
+export default function MovieCard({ movie, onMovieClick, showFeedback, onFeedback, modelVariant }) {
   const [tmdbData, setTmdbData] = useState(null)
-  const [hovered, setHovered] = useState(false)
-  const [feedbackGiven, setFeedbackGiven] = useState(null) // 1 or -1
+  const [hovered, setHovered]   = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    getTMDBData(movie.title, movie.release_year).then(data => {
-      if (!cancelled) setTmdbData(data)
-    })
-    return () => { cancelled = true }
-  }, [movie.title, movie.release_year])
+    if (movie?.title) {
+      getTMDBData(movie.title, movie.release_year).then(data => {
+        if (data) setTmdbData(data)
+      })
+    }
+  }, [movie?.title, movie?.release_year])
 
-  const handleFeedback = (e, signal) => {
-    e.stopPropagation()
-    setFeedbackGiven(signal)
-    onFeedback?.(movie.item_id, signal, modelVariant)
+  const posterUrl = tmdbData?.posterUrl || null
+  const title     = movie?.title || ''
+
+  const handleClick = () => {
+    onMovieClick?.(movie, tmdbData)
   }
-
-  const posterUrl = tmdbData?.posterUrl
 
   return (
     <div
       className={`movie-card ${hovered ? 'hovered' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onClick?.(movie, tmdbData)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={e => e.key === 'Enter' && onClick?.(movie, tmdbData)}
-      aria-label={`${movie.title}, ${movie.release_year}`}
+      onClick={handleClick}
+      style={{ cursor: 'pointer' }}
     >
-      {/* Poster */}
-      <div className="card-poster">
-        {posterUrl ? (
-          <img src={posterUrl} alt={movie.title} loading="lazy" />
-        ) : (
-          <div className="card-placeholder">
-            <span>{movie.title}</span>
-          </div>
-        )}
-        <div className="card-overlay" />
-      </div>
-
-      {/* Hover info */}
-      <div className="card-info">
-        <h3 className="card-title">{movie.title}</h3>
-        <div className="card-meta">
-          <span className="card-year">{movie.release_year}</span>
-          {tmdbData?.rating && (
-            <span className="card-rating">★ {tmdbData.rating}</span>
-          )}
+      {posterUrl ? (
+        <img
+          src={posterUrl}
+          alt={title}
+          className="movie-card-poster"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <div className="movie-card-placeholder">
+          <span className="movie-card-title-fallback">{title}</span>
         </div>
-        <div className="card-genres">
-          {movie.genres?.slice(0, 2).map(g => (
-            <span key={g} className="genre-tag">{g}</span>
-          ))}
-        </div>
+      )}
 
-        {showFeedback && (
-          <div className="card-feedback">
-            <button
-              className={`feedback-btn ${feedbackGiven === 1 ? 'active-up' : ''}`}
-              onClick={e => handleFeedback(e, 1)}
-              aria-label="Thumbs up"
-            >👍</button>
-            <button
-              className={`feedback-btn ${feedbackGiven === -1 ? 'active-down' : ''}`}
-              onClick={e => handleFeedback(e, -1)}
-              aria-label="Thumbs down"
-            >👎</button>
+      {hovered && (
+        <div className="movie-card-overlay">
+          <div className="movie-card-info">
+            <span className="card-title">{title}</span>
+            {movie?.release_year && <span className="card-year">{movie.release_year}</span>}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

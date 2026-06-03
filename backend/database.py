@@ -40,6 +40,24 @@ class WatchHistory(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ContinueWatching(Base):
+    __tablename__ = "continue_watching"
+    id         = Column(String, primary_key=True)
+    user_email = Column(String, nullable=False, index=True)
+    profile_id = Column(String, nullable=False, index=True)
+    items      = Column(Text, default="[]")  # JSON array of {movie, progress}
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class WatchAgain(Base):
+    __tablename__ = "watch_again"
+    id         = Column(String, primary_key=True)
+    user_email = Column(String, nullable=False, index=True)
+    profile_id = Column(String, nullable=False, index=True)
+    items      = Column(Text, default="[]")  # JSON array of movies
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
 class WatchInvite(Base):
     __tablename__ = "watch_invites"
     id          = Column(String, primary_key=True)
