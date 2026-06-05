@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { getTMDBData } from '../api/client'
 import './MovieCard.css'
 
-export default function MovieCard({ movie, onClick, showFeedback = false, modelVariant, onFeedback }) {
+export default function MovieCard({ movie, onMovieClick, showFeedback = false, modelVariant, onFeedback }) {
   const [tmdbData, setTmdbData] = useState(null)
-  const [hovered, setHovered] = useState(false)
-  const [feedbackGiven, setFeedbackGiven] = useState(null) // 1 or -1
+  const [hovered, setHovered]   = useState(false)
+  const [feedbackGiven, setFeedbackGiven] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -28,13 +28,12 @@ export default function MovieCard({ movie, onClick, showFeedback = false, modelV
       className={`movie-card ${hovered ? 'hovered' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onClick?.(movie, tmdbData)}
+      onClick={() => onMovieClick?.(movie, tmdbData)}
       role="button"
       tabIndex={0}
-      onKeyDown={e => e.key === 'Enter' && onClick?.(movie, tmdbData)}
+      onKeyDown={e => e.key === 'Enter' && onMovieClick?.(movie, tmdbData)}
       aria-label={`${movie.title}, ${movie.release_year}`}
     >
-      {/* Poster */}
       <div className="card-poster">
         {posterUrl ? (
           <img src={posterUrl} alt={movie.title} loading="lazy" />
@@ -46,7 +45,6 @@ export default function MovieCard({ movie, onClick, showFeedback = false, modelV
         <div className="card-overlay" />
       </div>
 
-      {/* Hover info */}
       <div className="card-info">
         <h3 className="card-title">{movie.title}</h3>
         <div className="card-meta">

@@ -4,7 +4,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 import uuid, json
 from datetime import datetime
-from database import get_db, User, Profile, WatchHistory, WatchInvite, WatchRoom
+from database import get_db, User, Profile, WatchHistory, ContinueWatching, WatchAgain, WatchInvite, WatchRoom
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
@@ -91,21 +91,8 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     )
     db.add(user)
 
-    # Create default profiles
-    profiles = []
-    for p in DEFAULT_PROFILES:
-        profile = Profile(
-            id=str(uuid.uuid4()),
-            user_email=req.email.lower(),
-            name=p["name"],
-            color=p["color"],
-            icon=p["icon"],
-        )
-        db.add(profile)
-        profiles.append({"id": profile.id, "name": profile.name, "color": profile.color, "icon": profile.icon})
-
     db.commit()
-    return {"status": "ok", "email": user.email, "name": user.name, "profiles": profiles}
+    return {"status": "ok", "email": user.email, "name": user.name, "profiles": []}
 
 @router.post("/auth/login")
 def login(req: LoginRequest, db: Session = Depends(get_db)):
@@ -247,6 +234,69 @@ def get_room(room_id: str, db: Session = Depends(get_db)):
         "participants": manager.room_size(room_id),
     }
 
+
+# ── Continue Watching & Watch Again endpoints ─────────────────────────────────
+class SaveListRequest(BaseModel):
+    user_email: str
+    profile_id: str
+    items: list
+
+@router.post("/continue-watching/save")
+def save_continue_watching(req: SaveListRequest, db: Session = Depends(get_db)):
+    record = db.query(ContinueWatching).filter(
+        ContinueWatching.user_email == req.user_email.lower(),
+        ContinueWatching.profile_id == req.profile_id,
+    ).first()
+    if record:
+        record.items      = json.dumps(req.items)
+        record.updated_at = datetime.utcnow()
+    else:
+        record = ContinueWatching(
+            id=str(uuid.uuid4()),
+            user_email=req.user_email.lower(),
+            profile_id=req.profile_id,
+            items=json.dumps(req.items),
+        )
+        db.add(record)
+    db.commit()
+    return {"status": "ok"}
+
+@router.get("/continue-watching/{email}/{profile_id}")
+def get_continue_watching(email: str, profile_id: str, db: Session = Depends(get_db)):
+    record = db.query(ContinueWatching).filter(
+        ContinueWatching.user_email == email.lower(),
+        ContinueWatching.profile_id == profile_id,
+    ).first()
+    return {"items": json.loads(record.items) if record else []}
+
+@router.post("/watch-again/save")
+def save_watch_again(req: SaveListRequest, db: Session = Depends(get_db)):
+    record = db.query(WatchAgain).filter(
+        WatchAgain.user_email == req.user_email.lower(),
+        WatchAgain.profile_id == req.profile_id,
+    ).first()
+    if record:
+        record.items      = json.dumps(req.items)
+        record.updated_at = datetime.utcnow()
+    else:
+        record = WatchAgain(
+            id=str(uuid.uuid4()),
+            user_email=req.user_email.lower(),
+            profile_id=req.profile_id,
+            items=json.dumps(req.items),
+        )
+        db.add(record)
+    db.commit()
+    return {"status": "ok"}
+
+@router.get("/watch-again/{email}/{profile_id}")
+def get_watch_again(email: str, profile_id: str, db: Session = Depends(get_db)):
+    record = db.query(WatchAgain).filter(
+        WatchAgain.user_email == email.lower(),
+        WatchAgain.profile_id == profile_id,
+    ).first()
+    return {"items": json.loads(record.items) if record else []}
+
 @router.websocket("/ws/room/{room_id}")
 async def websocket_room(room_id: str, ws: WebSocket, name: str = "Anonymous"):
     await manager.connect(room_id, ws, name)
@@ -267,3 +317,49 @@ async def websocket_room(room_id: str, ws: WebSocket, name: str = "Anonymous"):
             "type": "system", "text": f"{name} left the room",
             "timestamp": datetime.utcnow().isoformat(),
         })
+
+# ── Profile delete and rename ─────────────────────────────────────────────────
+class DeleteProfileRequest(BaseModel):
+    user_email: str
+    profile_id: str
+
+class RenameProfileRequest(BaseModel):
+    user_email: str
+    profile_id: str
+    new_name: str
+
+@router.post("/profiles/delete")
+def delete_profile(req: DeleteProfileRequest, db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(
+        Profile.id == req.profile_id,
+        Profile.user_email == req.user_email.lower()
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    # Delete associated watch history
+    db.query(WatchHistory).filter(
+        WatchHistory.profile_id == req.profile_id
+    ).delete()
+    db.delete(profile)
+    db.commit()
+    return {"status": "ok"}
+
+@router.post("/profiles/rename")
+def rename_profile(req: RenameProfileRequest, db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(
+        Profile.id == req.profile_id,
+        Profile.user_email == req.user_email.lower()
+    ).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    # Check duplicate name
+    existing = db.query(Profile).filter(
+        Profile.user_email == req.user_email.lower(),
+        Profile.name == req.new_name,
+        Profile.id != req.profile_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A profile with this name already exists")
+    profile.name = req.new_name
+    db.commit()
+    return {"status": "ok", "name": profile.name}

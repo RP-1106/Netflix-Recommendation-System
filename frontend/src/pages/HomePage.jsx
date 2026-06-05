@@ -103,7 +103,7 @@ export default function HomePage({ onWatchTogether }) {
       } catch (e) { console.error('Recommendations failed:', e) }
     }
     loadRecs()
-  }, [sessionId, refreshCount])
+  }, [sessionId, refreshCount,sessionId, refreshCount, watchHistory.length])
 
   const handleMovieClick = useCallback((movie, tmdbData) => {
     setSelectedMovie(movie)
@@ -118,7 +118,7 @@ export default function HomePage({ onWatchTogether }) {
 
   const continueWatchingMovies = continueWatching.map(cw => cw.movie)
   const watchedList    = recommendations.filter(m =>  watchedMovies.has(m.title))
-  const unwatchedRecs  = recommendations.filter(m => !watchedMovies.has(m.title))
+  const unwatchedRecs  = recommendations
   const currentHero    = heroItems[heroIndex] || null
 
   return (

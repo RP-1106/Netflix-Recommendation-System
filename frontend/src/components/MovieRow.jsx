@@ -28,7 +28,7 @@ export default function MovieRow({ title, movies, onMovieClick, showFeedback, mo
             <MovieCard
               key={movie.item_id || movie.id || i}
               movie={movie}
-              onClick={onMovieClick}
+              onMovieClick={onMovieClick}
               showFeedback={showFeedback}
               modelVariant={modelVariant}
               onFeedback={onFeedback}
