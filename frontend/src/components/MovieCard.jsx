@@ -8,20 +8,19 @@ export default function MovieCard({ movie, onMovieClick, showFeedback = false, m
   const [feedbackGiven, setFeedbackGiven] = useState(null)
 
   useEffect(() => {
-    let cancelled = false
-    getTMDBData(movie.title, movie.release_year).then(data => {
-      if (!cancelled) setTmdbData(data)
-    })
-    return () => { cancelled = true }
-  }, [movie.title, movie.release_year])
+    if (movie?.title) {
+      getTMDBData(movie.title, movie.release_year).then(data => {
+        if (data) setTmdbData(data)
+      })
+    }
+  }, [movie?.title, movie?.release_year])
 
-  const handleFeedback = (e, signal) => {
-    e.stopPropagation()
-    setFeedbackGiven(signal)
-    onFeedback?.(movie.item_id, signal, modelVariant)
+  const posterUrl = tmdbData?.posterUrl || null
+  const title     = movie?.title || ''
+
+  const handleClick = () => {
+    onMovieClick?.(movie, tmdbData)
   }
-
-  const posterUrl = tmdbData?.posterUrl
 
   return (
     <div
@@ -58,22 +57,16 @@ export default function MovieCard({ movie, onMovieClick, showFeedback = false, m
             <span key={g} className="genre-tag">{g}</span>
           ))}
         </div>
+      )}
 
-        {showFeedback && (
-          <div className="card-feedback">
-            <button
-              className={`feedback-btn ${feedbackGiven === 1 ? 'active-up' : ''}`}
-              onClick={e => handleFeedback(e, 1)}
-              aria-label="Thumbs up"
-            >👍</button>
-            <button
-              className={`feedback-btn ${feedbackGiven === -1 ? 'active-down' : ''}`}
-              onClick={e => handleFeedback(e, -1)}
-              aria-label="Thumbs down"
-            >👎</button>
+      {hovered && (
+        <div className="movie-card-overlay">
+          <div className="movie-card-info">
+            <span className="card-title">{title}</span>
+            {movie?.release_year && <span className="card-year">{movie.release_year}</span>}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

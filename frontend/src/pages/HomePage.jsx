@@ -7,7 +7,7 @@ import HeroSection from '../components/HeroSection'
 import './HomePage.css'
 
 export default function HomePage({ onWatchTogether }) {
-  const { sessionId, watchHistory, continueWatching, watchedMovies } = useAuth()
+  const { sessionId, watchHistory, continueWatching, watchAgain, watchedMovies, addToContinueWatching } = useAuth()
 
   const [recommendations, setRecommendations] = useState([])
   const [modelVariant, setModelVariant]       = useState('bert4rec')
@@ -128,7 +128,7 @@ export default function HomePage({ onWatchTogether }) {
           <HeroSection
             movie={currentHero.movie}
             tmdbData={currentHero.tmdbData}
-            onPlay={() => handleMovieClick(currentHero.movie, currentHero.tmdbData)}
+            onPlay={() => { addToContinueWatching(currentHero.movie); handleMovieClick(currentHero.movie, currentHero.tmdbData) }}
             onMoreInfo={() => handleMovieClick(currentHero.movie, currentHero.tmdbData)}
           />
           {heroItems.length > 1 && (
@@ -162,8 +162,8 @@ export default function HomePage({ onWatchTogether }) {
         )}
         <MovieRow title="New Releases"  movies={nowPlaying}          onMovieClick={handleMovieClick} />
         <MovieRow title="Trending Now"  movies={popular.slice(10,30)} onMovieClick={handleMovieClick} />
-        {watchedList.length > 0 && (
-          <MovieRow title="Watch Again" movies={watchedList} onMovieClick={handleMovieClick} />
+        {watchAgain.length > 0 && (
+          <MovieRow title="Watch Again" movies={watchAgain} onMovieClick={handleMovieClick} />
         )}
       </div>
 

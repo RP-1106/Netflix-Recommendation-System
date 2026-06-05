@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getTrailerKey, sendFeedback } from '../api/client'
+import { getTrailerKey, getTMDBData, sendFeedback } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import WatchTogetherModal from './WatchTogetherModal'
 import './MovieModal.css'
 
-export default function MovieModal({ movie, tmdbData, modelVariant, onClose, onWatchTogether }) {
-  const { sessionId, updateProgress } = useAuth()
+export default function MovieModal({ movie, tmdbData: initialTmdbData, modelVariant, onClose, onWatchTogether, source }) {
+  const { sessionId, addToContinueWatching, addToWatchAgain } = useAuth()
+  const [tmdbData, setTmdbData]           = useState(initialTmdbData || null)
   const [trailerKey, setTrailerKey]       = useState(null)
   const [showTrailer, setShowTrailer]     = useState(false)
   const [feedbackGiven, setFeedbackGiven] = useState(null)
@@ -23,14 +24,41 @@ export default function MovieModal({ movie, tmdbData, modelVariant, onClose, onW
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
+  // Fetch TMDB data if not provided (fixes Issue 2 — poster consistency & Issue 4 — correct trailer)
   useEffect(() => {
-    updateProgress(movie, 0.1)
+    if (!initialTmdbData && movie?.title) {
+      getTMDBData(movie.title, movie.release_year).then(data => {
+        if (data) setTmdbData(data)
+      })
+    }
+  }, [movie?.title, movie?.release_year, initialTmdbData])
+
+  // Issue 3: Opening modal adds to Continue Watching (via hero Play/More Info or card click)
+  // Only if source is NOT 'search_feedback' — feedback handled separately
+  useEffect(() => {
+    if (source !== 'feedback_only') {
+      addToContinueWatching(movie)
+    }
   }, [])
 
+  // Issue 4: Fix trailer — use fetched tmdbData, search by title if needed
   const handlePlayTrailer = async () => {
+    addToContinueWatching(movie)
     if (trailerKey) { setShowTrailer(true); return }
     setLoadingTrailer(true)
-    const key = await getTrailerKey(tmdbData?.tmdbId)
+
+    // Try with current tmdbData first
+    let key = tmdbData?.tmdbId ? await getTrailerKey(tmdbData.tmdbId, tmdbData.mediaType || 'movie') : null
+
+    // If no key, fetch TMDB data by title and try again
+    if (!key) {
+      const fetched = await getTMDBData(movie.title, movie.release_year)
+      if (fetched?.tmdbId) {
+        setTmdbData(fetched)
+        key = await getTrailerKey(fetched.tmdbId, fetched.mediaType || 'movie')
+      }
+    }
+
     setLoadingTrailer(false)
     if (key) {
       setTrailerKey(key)
@@ -39,11 +67,12 @@ export default function MovieModal({ movie, tmdbData, modelVariant, onClose, onW
       const query = encodeURIComponent(`${movie.title} ${movie.release_year} official trailer`)
       window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank')
     }
-    updateProgress(movie, 0.1)
   }
 
+  // Issue 3: Feedback adds to Watch Again, removes from Continue Watching
   const handleFeedback = async (signal) => {
     setFeedbackGiven(signal)
+    addToWatchAgain(movie)
     try {
       await sendFeedback(sessionId, movie.item_id, signal, modelVariant)
     } catch (e) { console.error('Feedback error:', e) }
@@ -57,7 +86,6 @@ export default function MovieModal({ movie, tmdbData, modelVariant, onClose, onW
       <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
         <div className="modal-content" onClick={e => e.stopPropagation()}>
 
-          {/* Hero */}
           <div className="modal-hero">
             {showTrailer && trailerKey ? (
               <iframe
@@ -79,7 +107,6 @@ export default function MovieModal({ movie, tmdbData, modelVariant, onClose, onW
             <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
           </div>
 
-          {/* Info */}
           <div className="modal-body">
             <div className="modal-header">
               <div>
@@ -94,44 +121,29 @@ export default function MovieModal({ movie, tmdbData, modelVariant, onClose, onW
               </div>
 
               <div className="modal-actions">
-                <button
-                  className="modal-play-btn"
-                  onClick={handlePlayTrailer}
-                  disabled={loadingTrailer}
-                >
+                <button className="modal-play-btn" onClick={handlePlayTrailer} disabled={loadingTrailer}>
                   {loadingTrailer ? '...' : '▶  Play Trailer'}
                 </button>
 
-                {/* Watch Together button */}
-                <button
-                  className="modal-watch-together-btn"
-                  onClick={() => setShowWatchTogether(true)}
-                  title="Watch with a friend"
-                >
+                <button className="modal-watch-together-btn"
+                  onClick={() => { addToContinueWatching(movie); setShowWatchTogether(true) }}
+                  title="Watch with a friend">
                   👥 Watch Together
                 </button>
 
                 <div className="modal-feedback">
-                  <button
-                    className={`modal-feedback-btn ${feedbackGiven === 1 ? 'active' : ''}`}
-                    onClick={() => handleFeedback(1)}
-                    title="I liked this"
-                  >👍</button>
-                  <button
-                    className={`modal-feedback-btn ${feedbackGiven === -1 ? 'active-down' : ''}`}
-                    onClick={() => handleFeedback(-1)}
-                    title="Not for me"
-                  >👎</button>
+                  <button className={`modal-feedback-btn ${feedbackGiven === 1 ? 'active' : ''}`}
+                    onClick={() => handleFeedback(1)} title="I liked this">👍</button>
+                  <button className={`modal-feedback-btn ${feedbackGiven === -1 ? 'active-down' : ''}`}
+                    onClick={() => handleFeedback(-1)} title="Not for me">👎</button>
                 </div>
               </div>
             </div>
-
             <p className="modal-overview">{overview}</p>
           </div>
         </div>
       </div>
 
-      {/* Watch Together invite modal */}
       {showWatchTogether && (
         <WatchTogetherModal
           movie={movie}

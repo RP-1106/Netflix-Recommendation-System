@@ -4,7 +4,7 @@ const AuthContext = createContext(null)
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(() => { try { return JSON.parse(localStorage.getItem('nf_user')) } catch { return null } })
+  const [user, setUser]     = useState(() => { try { return JSON.parse(localStorage.getItem('nf_user')) } catch { return null } })
   const [profile, setProfile] = useState(() => { try { return JSON.parse(localStorage.getItem('nf_profile')) } catch { return null } })
   const [profiles, setProfiles] = useState(() => { try { return JSON.parse(localStorage.getItem('nf_profiles')) || [] } catch { return [] } })
 

@@ -6,7 +6,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
 async function searchCatalogue(query) {
   try {
-    const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&top_k=5`)
+    const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&top_k=8`)
     const data = await res.json()
     return (data.results || []).map(r => ({
       ...r, _source: 'catalogue', _mediaType: 'movie',
@@ -36,13 +36,27 @@ async function searchTMDBTV(query) {
     )
     const data = await res.json()
     return (data.results || []).slice(0, 4).map(r => ({
-      ...r,
-      _source: 'tmdb',
-      _mediaType: 'tv',
+      ...r, _source: 'tmdb', _mediaType: 'tv',
       title: r.name || r.original_name,
       release_date: r.first_air_date,
     }))
   } catch { return [] }
+}
+
+// Issue 1: Score results by relevance to query
+function scoreResult(result, query) {
+  const title = (result.title || '').toLowerCase()
+  const q     = query.toLowerCase().trim()
+
+  if (title === q) return 100                          // exact match
+  if (title.startsWith(q)) return 90                  // prefix match
+  if (title.includes(q)) return 80                    // substring match
+  // Word-level match — all query words present in title
+  const words = q.split(/\s+/)
+  const matchedWords = words.filter(w => title.includes(w))
+  if (matchedWords.length === words.length) return 70 // all words match
+  if (matchedWords.length > 0) return 50 + (matchedWords.length / words.length) * 20
+  return result._source === 'catalogue' ? 30 : 20     // semantic/TMDB fallback
 }
 
 export default function SearchBar({ onSearch, onClose }) {
@@ -66,15 +80,20 @@ export default function SearchBar({ onSearch, onClose }) {
         searchTMDBTV(query),
       ])
 
-      const seen = new Set()
+      // Deduplicate by title
+      const seen   = new Set()
       const merged = []
       for (const r of [...catalogueRes, ...movieRes, ...tvRes]) {
         const key = (r.title || '').toLowerCase()
         if (!seen.has(key)) { seen.add(key); merged.push(r) }
       }
+
+      // Issue 1: Sort by relevance score (highest first)
+      merged.sort((a, b) => scoreResult(b, query) - scoreResult(a, query))
+
       setResults(merged.slice(0, 10))
       setLoading(false)
-    }, 350)
+    }, 300)
 
     return () => clearTimeout(debounceRef.current)
   }, [query])
@@ -83,31 +102,32 @@ export default function SearchBar({ onSearch, onClose }) {
     const isCatalogue = result._source === 'catalogue'
     const isTV        = result._mediaType === 'tv'
     const movie = {
-      item_id:      isCatalogue ? result.item_id : (isTV ? `tmdb_tv_${result.id}` : `tmdb_${result.id}`),
-      item_idx:     isCatalogue ? result.item_idx : -1,
-      title:        result.title,
-      release_year: result.release_year || result.release_date?.split('-')[0],
-      genres:       result.genres || [],
+      item_id:        isCatalogue ? result.item_id : (isTV ? `tmdb_tv_${result.id}` : `tmdb_${result.id}`),
+      item_idx:       isCatalogue ? result.item_idx : -1,
+      title:          result.title,
+      release_year:   result.release_year || result.release_date?.split('-')[0],
+      genres:         result.genres || [],
       log_popularity: result.log_popularity || Math.log(result.popularity || 1),
-      media_type:   result._mediaType,
+      media_type:     result._mediaType,
     }
-    const tmdbData = isCatalogue ? null : {
+    // Issue 2: Always pass TMDB data if available so poster is consistent
+    const tmdbData = (!isCatalogue && result.id) ? {
       tmdbId:      result.id,
       mediaType:   result._mediaType,
-      posterUrl:   result.poster_path   ? `https://image.tmdb.org/t/p/w500${result.poster_path}`        : null,
-      backdropUrl: result.backdrop_path ? `https://image.tmdb.org/t/p/original${result.backdrop_path}`  : null,
+      posterUrl:   result.poster_path   ? `https://image.tmdb.org/t/p/w500${result.poster_path}`       : null,
+      backdropUrl: result.backdrop_path ? `https://image.tmdb.org/t/p/original${result.backdrop_path}` : null,
       overview:    result.overview,
       rating:      result.vote_average?.toFixed(1),
-    }
+    } : null
+    // For catalogue items, tmdbData is null but MovieModal will auto-fetch it
     onSearch?.(movie, tmdbData)
     onClose?.()
   }
 
-  const getYear = (r) => r.release_year || r.release_date?.split('-')[0] || ''
-
-  const getLabel = (r) => {
+  const getYear   = (r) => r.release_year || r.release_date?.split('-')[0] || ''
+  const getLabel  = (r) => {
     if (r._source === 'catalogue') return { text: 'In Catalogue', color: '#46d369' }
-    if (r._mediaType === 'tv')     return { text: 'TV Show', color: '#0080ff' }
+    if (r._mediaType === 'tv')     return { text: 'TV Show',      color: '#0080ff' }
     return { text: 'Movie', color: '#888' }
   }
 
@@ -123,9 +143,7 @@ export default function SearchBar({ onSearch, onClose }) {
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === 'Escape' && onClose?.()}
         />
-        {query && (
-          <button className="searchbar-clear" onClick={() => setQuery('')}>✕</button>
-        )}
+        {query && <button className="searchbar-clear" onClick={() => setQuery('')}>✕</button>}
       </div>
 
       {(results.length > 0 || loading) && (

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SearchBar from './SearchBar'
 import NotificationBell from './NotificationBell'
 import './Navbar.css'
 
 export default function Navbar({ onSearch, activePage, onPageChange, onJoinParty }) {
-  const { user, profile, logout } = useAuth()
+  const { user, profile, logout, selectProfile } = useAuth()
+  const navigate    = useNavigate()
   const [showSearch, setShowSearch] = useState(false)
   const [scrolled, setScrolled]     = useState(false)
   const searchRef = useRef(null)
@@ -35,6 +37,16 @@ export default function Navbar({ onSearch, activePage, onPageChange, onJoinParty
   const avatarColor  = profile?.color || '#e50914'
   const avatarLetter = (profile?.name || user?.name || 'U')[0].toUpperCase()
 
+  const handleSwitchProfile = () => {
+    selectProfile(null)
+    navigate('/profiles')
+  }
+
+  const handleSignOut = () => {
+    logout()
+    navigate('/')
+  }
+
   return (
     <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
       <div className="navbar-left">
@@ -63,7 +75,6 @@ export default function Navbar({ onSearch, activePage, onPageChange, onJoinParty
           )}
         </div>
 
-        {/* Notification bell — shows watch party invites */}
         <NotificationBell onAccept={onJoinParty} />
 
         <div className="navbar-profile">
@@ -72,11 +83,12 @@ export default function Navbar({ onSearch, activePage, onPageChange, onJoinParty
           </div>
           <div className="profile-dropdown">
             <div className="dropdown-name">{profile?.name || user?.name}</div>
-            <div className="dropdown-email" style={{ padding: '0 16px 8px', fontSize: '11px', color: '#555' }}>
+            <div style={{ padding: '0 16px 8px', fontSize: '11px', color: '#555' }}>
               {user?.email}
             </div>
             <div className="dropdown-divider" />
-            <button onClick={logout}>Sign out</button>
+            <button onClick={handleSwitchProfile}>Switch Profile</button>
+            <button onClick={handleSignOut}>Sign Out</button>
           </div>
         </div>
       </div>
