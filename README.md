@@ -1,6 +1,7 @@
 # Streamora
-
+<p align="justify">
 A full-stack AI-powered streaming recommendation platform built with transformer-based sequential models, multi-profile accounts, and real-time Watch Together sessions.
+</p>
 
 > **Demo Video:** [Watch on YouTube](https://your-youtube-link-here)
 
@@ -10,14 +11,8 @@ A full-stack AI-powered streaming recommendation platform built with transformer
   - **Feedback Loop**: 👍 Thumbs up signals the recommender to fetch a fresh set of personalised recommendations. 👎 Thumbs down immediately removes that title from your feed and suppresses it from future recommendations.
   - **Semantic Search**: Powered by `all-MiniLM-L6-v2`, supports mood and genre queries like *"dark psychological thriller"* or *"feel-good 90s comedy"*, ranked by title relevance.
   - **Cold Start Handling**: New users without watch history are shown popularity-based recommendations using TMDB trending data and 38-dimensional user feature vectors. Once you interact with 6 or more titles, the system switches to personalised transformer-based recommendations.
-
-- **Watch Together**
-  - Invite a friend by email to a shared watch party.
-  - Once they accept, both users are connected via a real-time WebSocket room with a live chat sidebar, allowing them to watch and react together.
-
-- **Profiles**
-  - Up to 6 profiles per account, each with fully isolated watch history, Continue Watching lists, and personalised recommendations.
-  - Profiles can be created, renamed, and deleted, each with a custom avatar and colour.
+- **Watch Together**: Invite a friend by email to a shared watch party. Once they accept, both users are connected via a real-time WebSocket room with a live chat sidebar, allowing them to watch and react together.
+- **Profiles**: Up to 6 profiles per account, each with fully isolated watch history, Continue Watching lists, and personalised recommendations. Profiles can be created, renamed, and deleted, each with a custom avatar and colour.
 
 ## Tech Stack
 
@@ -43,7 +38,7 @@ A full-stack AI-powered streaming recommendation platform built with transformer
 
 Models trained on Netflix UK data — 9,387 items, 110,065 users. Evaluated on a held-out test set using standard ranking metrics.
 
-### BERT4Rec v3
+### BERT4Rec
 
 | Metric | Validation | Test |
 |--------|-----------|------|
@@ -55,7 +50,7 @@ Models trained on Netflix UK data — 9,387 items, 110,065 users. Evaluated on a
 | NDCG@20 | 0.1322   | 0.1040 |
 | MRR    | 0.1025    | 0.0782 |
 
-### SASRec v3
+### SASRec
 
 | Metric | Validation | Test |
 |--------|-----------|------|
@@ -75,14 +70,13 @@ Models trained on Netflix UK data — 9,387 items, 110,065 users. Evaluated on a
 - Node.js 20+
 
 ### Run Locally
-
-**1. Clone the repository**
+1. Clone the repository
 ```bash
 git clone https://github.com/RP-1106/Streamora-Recommendation-System
 cd Streamora-Recommendation-System/rec_system
 ```
 
-**2. Backend setup**
+2. Backend setup
 ```bash
 cd backend
 python -m venv venv
@@ -92,14 +86,14 @@ python -c "from database import init_db; init_db()"
 uvicorn main:app --reload --port 8000
 ```
 
-**3. Frontend setup** (new terminal)
+3. Frontend setup (new terminal)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-**4. Open** `http://localhost:5173`
+4. Open `http://localhost:5173`
 
 ### Run with Docker
 
@@ -112,21 +106,21 @@ Open `http://localhost`
 
 ### Deploy to AWS EC2
 
-**1. Launch EC2 instance** — Ubuntu 24.04, t3.medium, 30GB storage, open ports 22, 80, and 8000.
+1. Launch EC2 instance — Ubuntu 24.04, t3.medium, 30GB storage, open ports 22, 80, and 8000.
 
-**2. Install Docker**
+2. Install Docker
 ```bash
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker ubuntu
 newgrp docker
 ```
 
-**3. Pull and run**
+3. Pull and run
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-**4. Access** at `http://<EC2-PUBLIC-IP>`
+4. Access at `http://<EC2-PUBLIC-IP>`
 
 > **Note:** The frontend image must be built with `VITE_API_BASE_URL=http://<EC2-PUBLIC-IP>:8000` set so the frontend can reach the backend.
