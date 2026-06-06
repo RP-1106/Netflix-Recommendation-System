@@ -4,8 +4,6 @@ A full-stack AI-powered streaming recommendation platform built with transformer
 
 > **Demo Video:** [Watch on YouTube](https://your-youtube-link-here)
 
----
-
 ## Features
 
 ### 1. Recommendation Engine
@@ -21,7 +19,6 @@ Invite a friend by email to a shared watch party. Once they accept, both users a
 ### 3. Profiles
 Up to 6 profiles per account, each with fully isolated watch history, Continue Watching lists, and personalised recommendations. Profiles can be created, renamed, and deleted, each with a custom avatar and colour.
 
----
 
 ## Tech Stack
 
@@ -42,8 +39,6 @@ Up to 6 profiles per account, each with fully isolated watch history, Continue W
 
 ### External APIs
 [![TMDB](https://img.shields.io/badge/TMDB_API-01B4E4?style=for-the-badge&logo=themoviedatabase&logoColor=white)](https://www.themoviedb.org/)
-
----
 
 ## Model Evaluation
 
@@ -73,9 +68,8 @@ Models trained on Netflix UK data — 9,387 items, 110,065 users. Evaluated on a
 | NDCG@20 | 0.1803   | 0.1531 |
 | MRR    | 0.1432    | 0.1201 |
 
----
 
-## Getting Started
+## Installation
 
 ### Prerequisites
 - Python 3.11+
@@ -108,8 +102,6 @@ npm run dev
 
 **4. Open** `http://localhost:5173`
 
----
-
 ### Run with Docker
 
 ```bash
@@ -118,8 +110,6 @@ docker compose up
 ```
 
 Open `http://localhost`
-
----
 
 ### Deploy to AWS EC2
 
