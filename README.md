@@ -6,15 +6,10 @@ A full-stack AI-powered streaming recommendation platform built with transformer
 
 ## Features
 - **Recommendation Engine**
-  - Streamora uses two transformer-based sequential recommendation models: **BERT4Rec v3** and **SASRec v3**, trained on Netflix UK interaction data and served via ONNX Runtime for fast inference. As you interact with the platform, recommendations update in real time to reflect your taste.
-  - **Feedback Loop**
-    - 👍 Thumbs up signals the recommender to fetch a fresh set of personalised recommendations.
-    - 👎 Thumbs down immediately removes that title from your feed and suppresses it from future recommendations.
-  - **Semantic Search**
-    - Powered by `all-MiniLM-L6-v2`, supports mood and genre queries like *"dark psychological thriller"* or *"feel-good 90s comedy"*, ranked by title relevance.
-  - **Cold Start Handling**
-    - New users without watch history are shown popularity-based recommendations using TMDB trending data and 38-dimensional user feature vectors.
-    - Once you interact with 6 or more titles, the system switches to personalised transformer-based recommendations.
+  - Streamora uses two transformer-based sequential recommendation models: **BERT4Rec** and **SASRec**, trained on Netflix UK interaction data and served via ONNX Runtime for fast inference. As you interact with the platform, recommendations update in real time to reflect your taste.
+  - **Feedback Loop**: 👍 Thumbs up signals the recommender to fetch a fresh set of personalised recommendations. 👎 Thumbs down immediately removes that title from your feed and suppresses it from future recommendations.
+  - **Semantic Search**: Powered by `all-MiniLM-L6-v2`, supports mood and genre queries like *"dark psychological thriller"* or *"feel-good 90s comedy"*, ranked by title relevance.
+  - **Cold Start Handling**: New users without watch history are shown popularity-based recommendations using TMDB trending data and 38-dimensional user feature vectors. Once you interact with 6 or more titles, the system switches to personalised transformer-based recommendations.
 
 - **Watch Together**
   - Invite a friend by email to a shared watch party.
