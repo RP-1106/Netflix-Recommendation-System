@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 
 DATA_DIR     = os.getenv("DATA_DIR", "../data/output")
-DB_PATH      = os.path.join(DATA_DIR, "netflx.db")
+DB_PATH      = os.path.join(DATA_DIR, "streamora.db")
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine       = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

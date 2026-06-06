@@ -7,7 +7,7 @@ import HeroSection from '../components/HeroSection'
 import './HomePage.css'
 
 export default function HomePage({ onWatchTogether }) {
-  const { sessionId, watchHistory, continueWatching, watchAgain, watchedMovies, addToContinueWatching } = useAuth()
+  const { sessionId, watchHistory, continueWatching, watchedMovies, addToContinueWatching } = useAuth()
 
   const [recommendations, setRecommendations] = useState([])
   const [modelVariant, setModelVariant]       = useState('bert4rec')
@@ -17,6 +17,7 @@ export default function HomePage({ onWatchTogether }) {
   const [selectedTmdb, setSelectedTmdb]       = useState(null)
   const [loading, setLoading]                 = useState(true)
   const [refreshCount, setRefreshCount]       = useState(0)
+  const [interactedIds, setInteractedIds]     = useState(new Set())
 
   const [heroItems, setHeroItems] = useState([])
   const [heroIndex, setHeroIndex] = useState(0)
@@ -58,9 +59,9 @@ export default function HomePage({ onWatchTogether }) {
     return () => clearInterval(autoAdvanceRef.current)
   }, [heroItems, startAutoAdvance])
 
-  const goToHero  = useCallback((i) => { setHeroIndex(i); startAutoAdvance() }, [startAutoAdvance])
-  const heroPrev  = useCallback(() => { setHeroIndex(i => (i - 1 + Math.min(heroItems.length, 5)) % Math.min(heroItems.length, 5)); startAutoAdvance() }, [heroItems.length, startAutoAdvance])
-  const heroNext  = useCallback(() => { setHeroIndex(i => (i + 1) % Math.min(heroItems.length, 5)); startAutoAdvance() }, [heroItems.length, startAutoAdvance])
+  const goToHero = useCallback((i) => { setHeroIndex(i); startAutoAdvance() }, [startAutoAdvance])
+  const heroPrev = useCallback(() => { setHeroIndex(i => (i - 1 + Math.min(heroItems.length, 5)) % Math.min(heroItems.length, 5)); startAutoAdvance() }, [heroItems.length, startAutoAdvance])
+  const heroNext = useCallback(() => { setHeroIndex(i => (i + 1) % Math.min(heroItems.length, 5)); startAutoAdvance() }, [heroItems.length, startAutoAdvance])
 
   // Load TMDB once on mount
   useEffect(() => {
@@ -90,6 +91,8 @@ export default function HomePage({ onWatchTogether }) {
         const recs   = recRes.recommendations || []
         setRecommendations(recs)
         setModelVariant(recRes.model_variant)
+        // Reset interacted ids when recommendations refresh
+        setInteractedIds(new Set())
         if (recs.length > 0) {
           const heroRecs = await Promise.all(
             recs.slice(0, 5).map(async (movie) => {
@@ -103,23 +106,36 @@ export default function HomePage({ onWatchTogether }) {
       } catch (e) { console.error('Recommendations failed:', e) }
     }
     loadRecs()
-  }, [sessionId, refreshCount])
+  }, [sessionId, refreshCount, watchHistory.length])
 
   const handleMovieClick = useCallback((movie, tmdbData) => {
     setSelectedMovie(movie)
     setSelectedTmdb(tmdbData || null)
-    setRefreshCount(c => c + 1)
+    // Track interacted movies to remove from recommendations
+    if (movie?.item_id) {
+      setInteractedIds(prev => new Set([...prev, movie.item_id]))
+    }
   }, [])
 
   const handleFeedback = useCallback(async (movieId, signal, variant) => {
-    try { await sendFeedback(sessionId, movieId, signal, variant || modelVariant) }
-    catch (e) { console.error('Feedback error:', e) }
+    try {
+      await sendFeedback(sessionId, movieId, signal, variant || modelVariant)
+      if (signal === -1) {
+        // Remove thumbs down movie from recommendations immediately
+        setRecommendations(prev => prev.filter(m => m.item_id !== movieId))
+      } else if (signal === 1) {
+        // Thumbs up — trigger recommendations refresh
+        setRefreshCount(c => c + 1)
+      }
+    } catch (e) { console.error('Feedback error:', e) }
   }, [sessionId, modelVariant])
 
   const continueWatchingMovies = continueWatching.map(cw => cw.movie)
-  // watchAgain is now managed by AuthContext
-  const unwatchedRecs  = recommendations.filter(m => !watchedMovies.has(m.title))
-  const currentHero    = heroItems[heroIndex] || null
+  const continueWatchingIds = new Set(continueWatching.map(cw => cw.movie?.item_id).filter(Boolean))
+  const unwatchedRecs = watchHistory.length >= 6
+    ? recommendations.filter(m => !interactedIds.has(m.item_id) && !continueWatchingIds.has(m.item_id))
+    : recommendations.filter(m => !continueWatchingIds.has(m.item_id))
+  const currentHero = heroItems[heroIndex] || null
 
   return (
     <div className="home-page">
@@ -158,13 +174,10 @@ export default function HomePage({ onWatchTogether }) {
             onMovieClick={handleMovieClick} showFeedback modelVariant={modelVariant} onFeedback={handleFeedback} />
         )}
         {watchHistory.length < 3 && (
-          <MovieRow title="Popular on NETFLX" movies={popular} onMovieClick={handleMovieClick} />
+          <MovieRow title="Popular on STREAMORA" movies={popular} onMovieClick={handleMovieClick} />
         )}
-        <MovieRow title="New Releases"  movies={nowPlaying}          onMovieClick={handleMovieClick} />
+        <MovieRow title="New Releases"  movies={nowPlaying}           onMovieClick={handleMovieClick} />
         <MovieRow title="Trending Now"  movies={popular.slice(10,30)} onMovieClick={handleMovieClick} />
-        {watchAgain.length > 0 && (
-          <MovieRow title="Watch Again" movies={watchAgain} onMovieClick={handleMovieClick} />
-        )}
       </div>
 
       {selectedMovie && (
@@ -174,6 +187,7 @@ export default function HomePage({ onWatchTogether }) {
           modelVariant={modelVariant}
           onClose={() => { setSelectedMovie(null); setSelectedTmdb(null) }}
           onWatchTogether={(party) => { setSelectedMovie(null); onWatchTogether?.(party) }}
+          onFeedback={handleFeedback}
         />
       )}
     </div>

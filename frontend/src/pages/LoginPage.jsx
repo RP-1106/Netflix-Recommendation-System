@@ -53,7 +53,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-bg" />
       <div className="login-bg-overlay" />
-      <div className="login-logo">NETFLX</div>
+      <div className="login-logo">STREAMORA</div>
 
       <div className="login-card">
         <h1 className="login-heading">{mode === 'login' ? 'Log In' : 'Create Account'}</h1>
@@ -77,7 +77,7 @@ export default function LoginPage() {
 
         <p className="login-toggle">
           {mode === 'login' ? (
-            <>New to NETFLX?{' '}
+            <>New to STREAMORA?{' '}
               <button onClick={() => { setMode('signup'); setError('') }}>Sign up now</button>
             </>
           ) : (

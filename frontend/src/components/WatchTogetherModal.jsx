@@ -24,7 +24,7 @@ export default function WatchTogetherModal({ movie, onClose, onPartyStart }) {
 
       if (!checkData.exists) {
         setStatus('error')
-        setMessage(`No NETFLX account found for ${email}. Ask them to sign up first.`)
+        setMessage(`No STREAMORA account found for ${email}. Ask them to sign up first.`)
         return
       }
 
@@ -77,7 +77,7 @@ export default function WatchTogetherModal({ movie, onClose, onPartyStart }) {
         {status !== 'sent' ? (
           <>
             <p className="wt-desc">
-              Enter your friend's NETFLX email. They'll get a notification to join.
+              Enter your friend's STREAMORA email. They'll get a notification to join.
             </p>
             <input
               className="wt-input"

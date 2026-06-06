@@ -94,7 +94,7 @@ export default function WatchPartyPage({ roomId, movieId, movieTitle, onLeave })
       {/* Header */}
       <div className="watch-party-header">
         <div className="watch-party-title">
-          <span className="wp-logo">NETFLX</span>
+          <span className="wp-logo">STREAMORA</span>
           <span className="wp-movie-name">🎬 {movieTitle}</span>
           <span className="wp-participants">👥 {participants} watching</span>
           <span className={`wp-status ${connected ? 'connected' : 'disconnected'}`}>

@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import WatchTogetherModal from './WatchTogetherModal'
 import './MovieModal.css'
 
-export default function MovieModal({ movie, tmdbData: initialTmdbData, modelVariant, onClose, onWatchTogether, source }) {
-  const { sessionId, addToContinueWatching, addToWatchAgain } = useAuth()
+export default function MovieModal({ movie, tmdbData: initialTmdbData, modelVariant, onClose, onWatchTogether, source, onFeedback }) {
+  const { sessionId, addToContinueWatching } = useAuth()
   const [tmdbData, setTmdbData]           = useState(initialTmdbData || null)
   const [trailerKey, setTrailerKey]       = useState(null)
   const [showTrailer, setShowTrailer]     = useState(false)
@@ -24,7 +24,6 @@ export default function MovieModal({ movie, tmdbData: initialTmdbData, modelVari
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  // Fetch TMDB data if not provided (fixes Issue 2 — poster consistency & Issue 4 — correct trailer)
   useEffect(() => {
     if (!initialTmdbData && movie?.title) {
       getTMDBData(movie.title, movie.release_year).then(data => {
@@ -33,24 +32,19 @@ export default function MovieModal({ movie, tmdbData: initialTmdbData, modelVari
     }
   }, [movie?.title, movie?.release_year, initialTmdbData])
 
-  // Issue 3: Opening modal adds to Continue Watching (via hero Play/More Info or card click)
-  // Only if source is NOT 'search_feedback' — feedback handled separately
   useEffect(() => {
     if (source !== 'feedback_only') {
       addToContinueWatching(movie)
     }
   }, [])
 
-  // Issue 4: Fix trailer — use fetched tmdbData, search by title if needed
   const handlePlayTrailer = async () => {
     addToContinueWatching(movie)
     if (trailerKey) { setShowTrailer(true); return }
     setLoadingTrailer(true)
 
-    // Try with current tmdbData first
     let key = tmdbData?.tmdbId ? await getTrailerKey(tmdbData.tmdbId, tmdbData.mediaType || 'movie') : null
 
-    // If no key, fetch TMDB data by title and try again
     if (!key) {
       const fetched = await getTMDBData(movie.title, movie.release_year)
       if (fetched?.tmdbId) {
@@ -69,10 +63,9 @@ export default function MovieModal({ movie, tmdbData: initialTmdbData, modelVari
     }
   }
 
-  // Issue 3: Feedback adds to Watch Again, removes from Continue Watching
   const handleFeedback = async (signal) => {
     setFeedbackGiven(signal)
-    addToWatchAgain(movie)
+    onFeedback?.(movie.item_id, signal, modelVariant)
     try {
       await sendFeedback(sessionId, movie.item_id, signal, modelVariant)
     } catch (e) { console.error('Feedback error:', e) }

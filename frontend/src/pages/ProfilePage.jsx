@@ -74,7 +74,12 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_email: user?.email, profile_id: profileId }),
       })
-      if (res.ok) login({ ...user, profiles: profiles.filter(p => p.id !== profileId) })
+      if (res.ok) {
+        const remaining = profiles.filter(p => p.id !== profileId)
+        login({ ...user, profiles: remaining })
+        // If last profile was deleted, exit managing mode
+        if (remaining.length === 0) setManaging(false)
+      }
     } catch { alert('Failed to delete profile.') }
   }
 
@@ -99,7 +104,7 @@ export default function ProfilePage() {
   if (showAdd) {
     return (
       <div className="profile-page">
-        <div className="profile-logo">NETFLX</div>
+        <div className="profile-logo">STREAMORA</div>
         <div className="profile-content">
           <h1 className="profile-heading">Create Profile</h1>
           <div className="add-profile-form">
@@ -133,7 +138,7 @@ export default function ProfilePage() {
   // ── Who's Watching page ─────────────────────────────────────────────────
   return (
     <div className="profile-page">
-      <div className="profile-logo">NETFLX</div>
+      <div className="profile-logo">STREAMORA</div>
       <div className="profile-content">
         <h1 className="profile-heading">
           {managing ? 'Manage Profiles' : "Who's watching?"}
@@ -171,14 +176,26 @@ export default function ProfilePage() {
           )}
         </div>
 
-        <div className="profile-footer-btns">
-          <button className="profile-manage-btn" onClick={() => setManaging(m => !m)}>
-            {managing ? 'Done' : 'Manage Profiles'}
-          </button>
-          <button className="profile-signout-btn" onClick={() => { logout(); navigate('/') }}>
-            Sign Out
-          </button>
-        </div>
+        {/* Only show footer buttons if there are profiles */}
+        {profiles.length > 0 && (
+          <div className="profile-footer-btns">
+            <button className="profile-manage-btn" onClick={() => setManaging(m => !m)}>
+              {managing ? 'Done' : 'Manage Profiles'}
+            </button>
+            <button className="profile-signout-btn" onClick={() => { logout(); navigate('/') }}>
+              Sign Out
+            </button>
+          </div>
+        )}
+
+        {/* Show sign out only when no profiles remain */}
+        {profiles.length === 0 && (
+          <div className="profile-footer-btns">
+            <button className="profile-signout-btn" onClick={() => { logout(); navigate('/') }}>
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

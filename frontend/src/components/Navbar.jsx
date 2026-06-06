@@ -50,7 +50,7 @@ export default function Navbar({ onSearch, activePage, onPageChange, onJoinParty
   return (
     <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
       <div className="navbar-left">
-        <div className="navbar-logo" onClick={() => onPageChange('home')}>NETFLX</div>
+        <div className="navbar-logo" onClick={() => onPageChange('home')}>STREAMORA</div>
         <div className="navbar-links">
           {navLinks.map(link => (
             <span
