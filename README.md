@@ -5,9 +5,8 @@ A full-stack AI-powered streaming recommendation platform built with transformer
 > **Demo Video:** [Watch on YouTube](https://your-youtube-link-here)
 
 ## Features
-
 - **Recommendation Engine**
-  - Streamora uses two transformer-based sequential recommendation models — **BERT4Rec v3** and **SASRec v3** — trained on Netflix UK interaction data and served via ONNX Runtime for fast inference. As you interact with the platform, recommendations update in real time to reflect your taste.
+  - Streamora uses two transformer-based sequential recommendation models: **BERT4Rec v3** and **SASRec v3**, trained on Netflix UK interaction data and served via ONNX Runtime for fast inference. As you interact with the platform, recommendations update in real time to reflect your taste.
   - **Feedback Loop**
     - 👍 Thumbs up signals the recommender to fetch a fresh set of personalised recommendations.
     - 👎 Thumbs down immediately removes that title from your feed and suppresses it from future recommendations.
@@ -24,7 +23,6 @@ A full-stack AI-powered streaming recommendation platform built with transformer
 - **Profiles**
   - Up to 6 profiles per account, each with fully isolated watch history, Continue Watching lists, and personalised recommendations.
   - Profiles can be created, renamed, and deleted, each with a custom avatar and colour.
-
 
 ## Tech Stack
 
