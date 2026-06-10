@@ -3,7 +3,7 @@
 A full-stack AI-powered streaming recommendation platform built with transformer-based sequential models, multi-profile accounts, and real-time Watch Together sessions.
 </p>
 
-> **Demo Video:** [Video link](https://your-youtube-link-here)
+> **Demo Video:** [Video link]([https://your-youtube-link-here](https://youtu.be/6JtSAc9Zq68))
 
 ## Features
 - **Recommendation Engine**
